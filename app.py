@@ -132,7 +132,9 @@ def serve_layout():
                     html.Div(id='ennuste'),
                     html.Label(['Datan lähde: ', html.A('THL', href='https://thl.fi/fi/tilastot-ja-data/aineistot-ja-palvelut/avoin-data/varmistetut-koronatapaukset-suomessa-covid-19-')]),
                     html.Label(['Lassoregression dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Lasso.html#')]),
-                    html.Label(['Regressiometriikoiden dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics')])
+                    html.Label(['Regressiometriikoiden dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics')]),
+                    html.Label(['by Tuomas Poukkula ', html.A('Twitter', href='https://twitter.com/TuomasPoukkula')])
+        
         
     ])
 
