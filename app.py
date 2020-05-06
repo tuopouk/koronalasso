@@ -71,7 +71,7 @@ app.index_string = '''
 </html>
 '''
 
-app.scripts.append_script({"external_url": "https://cdn.plot.ly/plotly-locale-fi-latest.js"})
+app.scripts.append_script({"external_url": "https://raw.githubusercontent.com/plotly/plotly.js/master/dist/plotly-locale-fi.js"})
 
 app.config['suppress_callback_exceptions']=True
 
