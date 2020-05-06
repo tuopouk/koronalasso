@@ -173,7 +173,9 @@ def ennusta(shp,days):
     df.drop('i',axis=1,inplace=True)
     df.next = df.next.fillna(df.pvm.max()+pd.Timedelta(days=1))
     df['muutos'] = df.val-df.infected
-    df = df.set_index('pvm').loc[datetime.today()-pd.Timedelta(days = days_gone):].reset_index()
+    df = df.set_index('pvm').sort_index().loc[datetime.today()-pd.Timedelta(days = days_gone):].reset_index()
+    df.next = df.next.fillna(df.pvm + pd.Timedelta(days=1))
+    #print(df.tail())
 
     df_x = df.dropna().copy()
 
@@ -221,8 +223,11 @@ def ennusta(shp,days):
     
     datapoints = days
     
-    max_date = df.pvm.max()
-    print(max_date)
+    if df.val.isna().sum() > 0:
+        max_date = df.pvm.max()
+    else:
+        max_date = df.next.max()
+    #print(max_date)
     
     x_train = df_x[['infected']]
     X_train =scl.fit_transform(x_train)
@@ -284,16 +289,17 @@ def ennusta(shp,days):
             df = pd.concat([df,df_tail])
 
         
-    df = df.set_index('pvm')
+    #df = df.set_index('pvm')
+    df = pd.concat([df[['pvm','infected']],df[['next','val']].rename(columns={'next':'pvm','val':'infected'})],axis=0).drop_duplicates().set_index('pvm').sort_index()
     
     return html.Div(children=[
                              dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                        figure = go.Figure(data=[
-                                                                go.Scatter(x = df.loc[:max_date].next, 
-                                                                           y = df.loc[:max_date].val,
+                                                                go.Scatter(x = df.loc[:max_date].index, 
+                                                                           y = df.loc[:max_date].infected,
                                                                            name='Toteutunut'),
-                                                                go.Scatter(x = df.loc[max_date+pd.Timedelta(days=1):].next,
-                                                                           y = np.ceil(df.loc[max_date+pd.Timedelta(days=1):].val),
+                                                                go.Scatter(x = df.loc[max_date+pd.Timedelta(days=1):].index,
+                                                                           y = np.ceil(df.loc[max_date+pd.Timedelta(days=1):].infected),
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = str(days)+' päivän ennuste alueelle: '+shp)
