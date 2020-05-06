@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import math
 import numpy as np
@@ -71,7 +73,7 @@ app.index_string = '''
 </html>
 '''
 
-app.scripts.append_script({"external_url": "https://raw.githubusercontent.com/plotly/plotly.js/master/dist/plotly-locale-fi.js"})
+#app.scripts.append_script({"external_url": "https://raw.githubusercontent.com/plotly/plotly.js/master/dist/plotly-locale-fi.js"})
 
 app.config['suppress_callback_exceptions']=True
 
