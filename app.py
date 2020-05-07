@@ -304,7 +304,10 @@ def ennusta(shp,days):
                                                                            y = np.ceil(df.loc[max_date+pd.Timedelta(days=1):].infected),
                                                                            name='Ennuste')
                                                                ],
-                                                          layout=go.Layout(title = str(days)+' päivän ennuste alueelle: '+shp)
+                                                          layout=go.Layout(title = str(days)+' päivän ennuste alueelle: '+shp,
+                                                                          yaxis = dict(title = 'Tartunnat'),
+                                                                          xaxis = dict(title = 'Päivät'),
+                                                                          autosize = True)
                                                          )
                                       ),
                                                          
