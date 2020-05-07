@@ -305,7 +305,7 @@ def ennusta(shp,days):
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = str(days)+' päivän ennuste alueelle: '+shp,
-                                                                          yaxis = dict(title = 'Tartunnat'),
+                                                                          yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
                                                                           autosize = True)
                                                          )
