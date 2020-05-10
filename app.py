@@ -315,7 +315,7 @@ def ennusta(shp,days):
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = dict(
-                                                                                   text = str(days)+' päivän koronatartuntojen kumulatiivinen ennuste alueelle: '+shp,
+                                                          text = 'Koronatartuntojen seuraavan '+str(days)+' päivän kumulatiivinen ennuste alueelle: '+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                                                    xanchor = 'center',
@@ -343,7 +343,7 @@ def ennusta(shp,days):
                                                                        textposition='outside'
                                                                        )],
                                                            layout = go.Layout(title = dict(
-                                                                    text = str(days)+' päivän päivittäiset ennusteet alueelle: '+shp,
+                                                                    text = 'Koronatartuntojen seuraavan '+str(days)+' päivän päivittäiset ennusteet alueelle: '+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                                                    xanchor = 'center',
