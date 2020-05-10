@@ -332,10 +332,15 @@ def ennusta(shp,days):
                                          figure = go.Figure(data= [
                                                                  go.Bar(x = df_days.loc[:max_date].index,
                                                                        y = df_days.loc[:max_date].values,
-                                                                       name = 'Toteutunut'),
+                                                                       name = 'Toteutunut',
+                                                                       text = df_days.loc[:max_date].values,
+                                                                       textposition='outside'),
                                                                  go.Bar(x = df_days.loc[max_date+pd.Timedelta(days=1):].index,
                                                                        y = df_days.loc[max_date+pd.Timedelta(days=1):].values,
-                                                                       name = 'Ennuste')],
+                                                                       name = 'Ennuste',
+                                                                       text = df_days.loc[max_date+pd.Timedelta(days=1):].values,
+                                                                       textposition='outside'
+                                                                       )],
                                                            layout = go.Layout(title = dict(
                                                                     text = str(days)+' päivän päivittäiset ennusteet alueelle: '+shp,
                                                                                    y = 0.9,
