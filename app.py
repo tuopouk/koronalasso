@@ -134,7 +134,7 @@ def serve_layout():
                     html.Label(['Lassoregression dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Lasso.html#')]),
                     html.Label(['Regressiometriikoiden dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics')]),
                     html.Label(['Katso toteutuneet koronatiedot ', html.A('täältä.', href='http://bit.ly/turkukorona'),
-                    html.Label(['Tehnyt Tuomas Poukkula ', html.A('Seuraa Twitterissä.', href='https://twitter.com/TuomasPoukkula')]),
+                    html.Label(['Tehnyt Tuomas Poukkula. ', html.A('Seuraa Twitterissä.', href='https://twitter.com/TuomasPoukkula')]),
                     ])
         
         
