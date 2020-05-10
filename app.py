@@ -133,7 +133,8 @@ def serve_layout():
                     html.Label(['Datan lähde: ', html.A('THL', href='https://thl.fi/fi/tilastot-ja-data/aineistot-ja-palvelut/avoin-data/varmistetut-koronatapaukset-suomessa-covid-19-')]),
                     html.Label(['Lassoregression dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Lasso.html#')]),
                     html.Label(['Regressiometriikoiden dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics')]),
-                    html.Label(['by Tuomas Poukkula ', html.A('Twitter', href='https://twitter.com/TuomasPoukkula')])
+                    html.Label(['by Tuomas Poukkula ', html.A('Twitter', href='https://twitter.com/TuomasPoukkula')]),
+                    html.Label(['Katso toteutuneet koronatiedot ', html.A('täältä.', href='http://bit.ly/turkukorona')])
         
         
     ])
@@ -294,6 +295,14 @@ def ennusta(shp,days):
     #df = df.set_index('pvm')
     df = pd.concat([df[['pvm','infected']],df[['next','val']].rename(columns={'next':'pvm','val':'infected'})],axis=0).drop_duplicates().set_index('pvm').sort_index()
     
+    df.infected = np.ceil(df.infected)
+    
+    df_days = df['infected'].diff().dropna()
+    
+    #df_days.iloc[0] = df.iloc[0]
+    
+    
+    
     return html.Div(children=[
                              dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                        figure = go.Figure(data=[
@@ -301,17 +310,45 @@ def ennusta(shp,days):
                                                                            y = df.loc[:max_date].infected,
                                                                            name='Toteutunut'),
                                                                 go.Scatter(x = df.loc[max_date+pd.Timedelta(days=1):].index,
-                                                                           y = np.ceil(df.loc[max_date+pd.Timedelta(days=1):].infected),
+                                                                           y = df.loc[max_date+pd.Timedelta(days=1):].infected,
                                                                            name='Ennuste')
                                                                ],
-                                                          layout=go.Layout(title = str(days)+' päivän ennuste alueelle: '+shp,
+                                                          layout=go.Layout(title = dict(
+                                                                                   text = str(days)+' päivän ennuste alueelle: '+shp,
+                                                                                   y = 0.9,
+                                                                                   x = 0.5,
+                                                                                   xanchor = 'center',
+                                                                                   yanchor = 'top'
+                                                                                  ),
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
                                                                           autosize = True)
                                                          )
                                       ),
                                                          
-                                html.P(chain)])
+                                html.P(chain),
+                                html.Br(),
+                                dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
+                                         figure = go.Figure(data= [
+                                                                 go.Bar(x = df_days.loc[:max_date].index,
+                                                                       y = df_days.loc[:max_date].values,
+                                                                       name = 'Toteutunut'),
+                                                                 go.Bar(x = df_days.loc[max_date+pd.Timedelta(days=1):].index,
+                                                                       y = df_days.loc[max_date+pd.Timedelta(days=1):].values,
+                                                                       name = 'Ennuste')],
+                                                           layout = go.Layout(title = dict(
+                                                                    text = str(days)+' päivän päivittäiset ennusteet alueelle: '+shp,
+                                                                                   y = 0.9,
+                                                                                   x = 0.5,
+                                                                                   xanchor = 'center',
+                                                                                   yanchor = 'top'
+                                                                               ),
+                                                                          yaxis = dict(title = 'Tartunnat', tickformat =' '),
+                                                                          xaxis = dict(title = 'Päivät'),
+                                                                          autosize = True)
+                                                           )
+                                         )
+    ])
 
 app.layout= serve_layout
 #Aja sovellus.
