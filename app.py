@@ -286,10 +286,28 @@ def ennusta(shp,days):
                 df_tail.index+=1
             
             x_predict = df_tail[['infected']]
+            
+#             if x_predict.values[0] < df.tail(2).head(1)[['infected']].values[0]:
+#                 x_predict = df.tail(2).head(1)[['infected']]
+#                 print('found')
+            
             X_predict = scl.transform(x_predict)
         
             df_tail.val = lasso.predict(X_predict)
             df_tail.val = np.maximum(0,  df_tail.val)
+            
+            #print(df_tail.val)
+            #print( df.tail(2).iloc[0,:])
+            #print(df.tail(1).infected.values[0])
+            #print('---')
+            if df_tail['val'].values[0]<df.tail(1)['infected'].values[0]:
+                #print('found')
+                #print(df_tail['val'].values[0])
+                df_tail.val=df.tail(1)['infected'].values
+                #print(df_tail['val'].values[0])
+            #df_tail.val = np.maximum(df_tail.val, df.tail(1).infected)
+      
+            
             df = pd.concat([df,df_tail])
 
         
@@ -301,22 +319,23 @@ def ennusta(shp,days):
     df_days = df['infected'].diff().dropna()
     
     
-    correct_vals = []
-    listed_vals = list(df.loc[max_date+pd.Timedelta(days=1):].infected)
-    correct_vals.append(int(listed_vals[0]))
+#     correct_vals = []
+#     listed_vals = list(df.loc[max_date+pd.Timedelta(days=1):].infected)
+#     correct_vals.append(listed_vals[0])
     
     
-    for i in range(len(listed_vals)):
-        if i == 0:
-            continue
-        else:
+#     for i in range(len(listed_vals)):
+#         if i == 0:
+#             continue
+#         else:
             
-            if int(listed_vals[i]) < int(listed_vals[i-1]):
+#             if listed_vals[i] < listed_vals[i-1]:
+#                 print('found')
                
-                correct_vals.append(int(listed_vals[i-1]))
-                listed_vals[i] = listed_vals[i-1]
-            else:
-                correct_vals.append(int(listed_vals[i]))                     
+#                 correct_vals.append(listed_vals[i-1])
+#                 listed_vals[i] = listed_vals[i-1]
+#             else:
+#                 correct_vals.append(listed_vals[i])                   
                
     
     return html.Div(children=[
@@ -326,7 +345,7 @@ def ennusta(shp,days):
                                                                            y = df.loc[:max_date].infected,
                                                                            name='Toteutunut'),
                                                                 go.Scatter(x = df.loc[max_date+pd.Timedelta(days=1):].index,
-                                                                           y = correct_vals,
+                                                                           y = df.loc[max_date+pd.Timedelta(days=1):].infected,
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = dict(
