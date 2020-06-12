@@ -332,14 +332,14 @@ def ennusta(shp,days):
                                 dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                          figure = go.Figure(data= [
                                                                  go.Bar(x = df_days.loc[:max_date].index,
-                                                                       y = df_days.loc[:max_date].values,
+                                                                       y = np.maximum(0,df_days.loc[:max_date].values),
                                                                        name = 'Toteutunut',
-                                                                       text = df_days.loc[:max_date].values,
+                                                                       text = np.maximum(0,df_days.loc[:max_date].values),
                                                                        textposition='outside'),
                                                                  go.Bar(x = df_days.loc[max_date+pd.Timedelta(days=1):].index,
-                                                                       y = df_days.loc[max_date+pd.Timedelta(days=1):].values,
+                                                                       y = np.maximum(0,df_days.loc[max_date+pd.Timedelta(days=1):].values),
                                                                        name = 'Ennuste',
-                                                                       text = df_days.loc[max_date+pd.Timedelta(days=1):].values,
+                                                                       text = np.maximum(0,df_days.loc[max_date+pd.Timedelta(days=1):].values),
                                                                        textposition='outside'
                                                                        )],
                                                            layout = go.Layout(title = dict(
