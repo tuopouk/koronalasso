@@ -293,16 +293,31 @@ def ennusta(shp,days):
             df = pd.concat([df,df_tail])
 
         
-    #df = df.set_index('pvm')
+    
     df = pd.concat([df[['pvm','infected']],df[['next','val']].rename(columns={'next':'pvm','val':'infected'})],axis=0).drop_duplicates().set_index('pvm').sort_index()
     
     df.infected = np.ceil(df.infected)
     
     df_days = df['infected'].diff().dropna()
     
-    #df_days.iloc[0] = df.iloc[0]
+    
+    correct_vals = []
+    listed_vals = list(df.loc[max_date+pd.Timedelta(days=1):].infected)
+    correct_vals.append(int(listed_vals[0]))
     
     
+    for i in range(len(listed_vals)):
+        if i == 0:
+            continue
+        else:
+            
+            if int(listed_vals[i]) < int(listed_vals[i-1]):
+               
+                correct_vals.append(int(listed_vals[i-1]))
+                listed_vals[i] = listed_vals[i-1]
+            else:
+                correct_vals.append(int(listed_vals[i]))                     
+               
     
     return html.Div(children=[
                              dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
@@ -311,7 +326,7 @@ def ennusta(shp,days):
                                                                            y = df.loc[:max_date].infected,
                                                                            name='Toteutunut'),
                                                                 go.Scatter(x = df.loc[max_date+pd.Timedelta(days=1):].index,
-                                                                           y = df.loc[max_date+pd.Timedelta(days=1):].infected,
+                                                                           y = correct_vals,
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = dict(
