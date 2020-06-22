@@ -135,6 +135,7 @@ def serve_layout():
                     html.Label(['Regressiometriikoiden dokumentaatio: ', html.A('Scikit-Learn', href='https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics')]),
                     html.Label(['Katso toteutuneet koronatiedot ', html.A('täältä.', href='http://bit.ly/turkukorona'),
                     html.Label(['Tehnyt Tuomas Poukkula. ', html.A('Seuraa Twitterissä.', href='https://twitter.com/TuomasPoukkula')]),
+                    html.Label(['Koodi Githubissa: ',html.A('Github',href='https://github.com/tuopouk/koronalasso')]),
                     ])
         
         
