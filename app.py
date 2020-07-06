@@ -17,7 +17,7 @@ from flask import Flask
 from datetime import datetime
 import os
 
-days_gone = 75
+days_gone = 100
 
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
 
@@ -99,7 +99,7 @@ def serve_layout():
 
                     html.H1('KoronaLasso',style=dict(textAlign='center')),
                     html.Br(),
-                    html.P('Tällä sivulla testataan Lassoregression kykyä ennustaa uudet päivittäiset koronavirustartunnat sairaanhoitopiireittäin edeltävien tartuntatapausten perusteella sekä projisoidaan ennuste tulevaisuuteen. Data haetaan suoraan THL:n rajapinnasta (linkki alla), minkä jälkeen '+str(days_gone)+' edeltävien päivien tartuntatapausten määrän perusteella koneoppimisalgoritmi ennustaa tulevien päivien tartuntojen määrää. Tässä ratkaisussa hyödynnetään Scikit-learn kirjaston lineaarista Lassoregressiota (linkki tarkempaan dokumentaatioon alla). Tämän sivun tarkoitus on kokeilla kyseistä mallia tartuntojen ennustamiseen, ei niinkään tuottaa perustavanlaatuista ennustetta (vaikkakin esitettyjen laatumittareiden valossa tämä malli antaakin melko hyvän ennusteen tietyille sairaanhoitopiireille). Alla olevista valikoista voi valita sairaanhoitopiirin ja kuinka monelle päivälle ennusteen haluaa tehdä. Kuvaajan alla näkyy myös testin laatumittarit. Testi on tehty jakamalla data osiin (70% opetusdataa, 30% testausdataa). Itse mittareista voi lukea lisää Scikit-learn-kirjaston dokumentaatiosta (linkki alla).'),
+                    html.P('Tällä sivulla testataan Lassoregression kykyä ennustaa uudet päivittäiset koronavirustartunnat sairaanhoitopiireittäin edeltävien tartuntatapausten perusteella sekä projisoidaan ennuste tulevaisuuteen. Data haetaan suoraan THL:n rajapinnasta (linkki alla), minkä jälkeen '+str(days_gone)+' edeltävän päivän tartuntatapausten määrän perusteella koneoppimisalgoritmi ennustaa tulevien päivien tartuntojen määrää. Tässä ratkaisussa hyödynnetään Scikit-learn kirjaston lineaarista Lassoregressiota (linkki tarkempaan dokumentaatioon alla). Tämän sivun tarkoitus on kokeilla kyseistä mallia tartuntojen ennustamiseen, ei niinkään tuottaa perustavanlaatuista ennustetta (vaikkakin esitettyjen laatumittareiden valossa tämä malli antaakin melko hyvän ennusteen tietyille sairaanhoitopiireille). Alla olevista valikoista voi valita sairaanhoitopiirin ja kuinka monelle päivälle ennusteen haluaa tehdä. Kuvaajan alla näkyy myös testin laatumittarit. Testi on tehty jakamalla data osiin (70% opetusdataa, 30% testausdataa). Itse mittareista voi lukea lisää Scikit-learn-kirjaston dokumentaatiosta (linkki alla).'),
         html.Br(),
                     html.Div(className = 'row',
                              children=[
