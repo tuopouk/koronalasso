@@ -17,7 +17,7 @@ from flask import Flask
 from datetime import datetime
 import os
 
-days_gone = 100
+days_gone = (datetime.now()-datetime(2020,1,1)).days
 
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
 
@@ -99,7 +99,7 @@ def serve_layout():
 
                     html.H1('KoronaLasso',style=dict(textAlign='center')),
                     html.Br(),
-                    html.P('Tällä sivulla testataan Lassoregression kykyä ennustaa uudet päivittäiset koronavirustartunnat sairaanhoitopiireittäin edeltävien tartuntatapausten perusteella sekä projisoidaan ennuste tulevaisuuteen. Data haetaan suoraan THL:n rajapinnasta (linkki alla), minkä jälkeen '+str(days_gone)+' edeltävän päivän tartuntatapausten määrän perusteella koneoppimisalgoritmi ennustaa tulevien päivien tartuntojen määrää. Tässä ratkaisussa hyödynnetään Scikit-learn kirjaston lineaarista Lassoregressiota (linkki tarkempaan dokumentaatioon alla). Tämän sivun tarkoitus on kokeilla kyseistä mallia tartuntojen ennustamiseen, ei niinkään tuottaa perustavanlaatuista ennustetta (vaikkakin esitettyjen laatumittareiden valossa tämä malli antaakin melko hyvän ennusteen tietyille sairaanhoitopiireille). Alla olevista valikoista voi valita sairaanhoitopiirin ja kuinka monelle päivälle ennusteen haluaa tehdä. Kuvaajan alla näkyy myös testin laatumittarit. Testi on tehty jakamalla data osiin (70% opetusdataa, 30% testausdataa). Itse mittareista voi lukea lisää Scikit-learn-kirjaston dokumentaatiosta (linkki alla).'),
+                    html.P('Tällä sivulla testataan Lassoregression kykyä ennustaa uudet päivittäiset koronavirustartunnat sairaanhoitopiireittäin edeltävien tartuntatapausten perusteella sekä projisoidaan ennuste tulevaisuuteen. Data haetaan suoraan THL:n rajapinnasta (linkki alla), minkä jälkeen käyttäjän valitsemien edeltävien päivien tartuntatapausten määrän perusteella koneoppimisalgoritmi ennustaa tulevien päivien tartuntojen määrää. Näin käyttäjä voi itse valita opetusdatan, jolla saa parhaan ennusteen valitulle sairaanhoitopiirille testausindikaattorien muutosta seuraamalla. Tässä ratkaisussa hyödynnetään Scikit-learn kirjaston lineaarista Lassoregressiota (linkki tarkempaan dokumentaatioon alla). Tämän sivun tarkoitus on kokeilla kyseistä mallia tartuntojen ennustamiseen, ei niinkään tuottaa perustavanlaatuista ennustetta (vaikkakin esitettyjen laatumittareiden valossa tämä malli antaakin melko hyvän ennusteen tietyille sairaanhoitopiireille). Alla olevista valikoista voi valita sairaanhoitopiirin ja kuinka monelle päivälle ennusteen haluaa tehdä. Kuvaajan alla näkyy myös testin laatumittarit. Testi on tehty jakamalla data osiin (70% opetusdataa, 30% testausdataa). Itse mittareista voi lukea lisää Scikit-learn-kirjaston dokumentaatiosta (linkki alla).'),
         html.Br(),
                     html.Div(className = 'row',
                              children=[
@@ -128,6 +128,20 @@ def serve_layout():
                                                           )
                                                 ])
                              ]),
+                    html.Div([html.H2('Valitse opetusdatan pituus'),
+                            dcc.Slider(id ='alku', 
+                                       min = 7,
+                                       max = days_gone,
+                                       step=1,
+                                      value = 100,
+                                      marks = {
+                                      7: 'viikko',
+                                      14: '2 viikkoa',
+                                      30:'kuukausi',
+                                      90: 'kolme kuukautta',
+                                      180:'puoli vuotta',
+                                      days_gone:'vuoden alusta'}),
+                             html.Div(id = 'alku_indicator', style={'margin-top': 20})]),
 
                     html.Div(id='ennuste'),
                     html.Label(['Datan lähde: ', html.A('THL', href='https://thl.fi/fi/tilastot-ja-data/aineistot-ja-palvelut/avoin-data/varmistetut-koronatapaukset-suomessa-covid-19-')]),
@@ -142,13 +156,23 @@ def serve_layout():
     ])
 
 @app.callback(
+    Output('alku_indicator', 'children'),
+    [Input('alku', 'value')])
+def update_year(value):
+    
+    return 'Valittu opetukseen: {} päivää ennen nykyhetkeä.'.format(
+        str(value)
+    )
+
+@app.callback(
     Output('ennuste','children'),
     [Input('sairaanhoitopiirit','value'),
-    Input('päivät','value')]
+    Input('päivät','value'),
+    Input('alku','value')]
 )
-def ennusta(shp,days):
+def ennusta(shp,days,alku):
 
-
+    days_gone =alku
     
     url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.json?row=dateweek2020010120201231-443702L&column=hcdmunicipality2020-445222L'
     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
@@ -180,7 +204,7 @@ def ennusta(shp,days):
     df['muutos'] = df.val-df.infected
     df = df.set_index('pvm').sort_index().loc[datetime.today()-pd.Timedelta(days = days_gone):].reset_index()
     df.next = df.next.fillna(df.pvm + pd.Timedelta(days=1))
-    #print(df.tail())
+    
 
     df_x = df.dropna().copy()
 
@@ -232,7 +256,7 @@ def ennusta(shp,days):
         max_date = df.pvm.max()
     else:
         max_date = df.next.max()
-    #print(max_date)
+    
     
     x_train = df_x[['infected']]
     X_train =scl.fit_transform(x_train)
@@ -249,6 +273,7 @@ def ennusta(shp,days):
             
             df_tail = df.tail(1).copy()
             
+            
             if df_tail.val.notna().values[0]:
             
                 df_tail.pvm=df_tail.next
@@ -264,7 +289,10 @@ def ennusta(shp,days):
             X_predict = scl.transform(x_predict)
             
             df_tail.muutos = lasso.predict(X_predict)
-            df_tail.val = np.maximum(0, df_tail.infected + df_tail.muutos)
+            df_tail.val = np.maximum(df_tail.infected,np.maximum(0, df_tail.infected + df_tail.muutos))
+            
+            
+            
             df = pd.concat([df,df_tail])
     
     else:
@@ -288,25 +316,14 @@ def ennusta(shp,days):
             
             x_predict = df_tail[['infected']]
             
-#             if x_predict.values[0] < df.tail(2).head(1)[['infected']].values[0]:
-#                 x_predict = df.tail(2).head(1)[['infected']]
-#                 print('found')
+
             
             X_predict = scl.transform(x_predict)
         
-            df_tail.val = lasso.predict(X_predict)
-            df_tail.val = np.maximum(0,  df_tail.val)
             
-            #print(df_tail.val)
-            #print( df.tail(2).iloc[0,:])
-            #print(df.tail(1).infected.values[0])
-            #print('---')
-            if df_tail['val'].values[0]<df.tail(1)['infected'].values[0]:
-                #print('found')
-                #print(df_tail['val'].values[0])
-                df_tail.val=df.tail(1)['infected'].values
-                #print(df_tail['val'].values[0])
-            #df_tail.val = np.maximum(df_tail.val, df.tail(1).infected)
+
+            df_tail.val = np.maximum(df_tail.infected,np.maximum(0,  lasso.predict(X_predict)))
+
       
             
             df = pd.concat([df,df_tail])
@@ -317,29 +334,15 @@ def ennusta(shp,days):
     
     df.infected = np.ceil(df.infected)
     
-    df_days = df['infected'].diff().dropna()
     
+    df_days = df['infected'].diff()
     
-#     correct_vals = []
-#     listed_vals = list(df.loc[max_date+pd.Timedelta(days=1):].infected)
-#     correct_vals.append(listed_vals[0])
-    
-    
-#     for i in range(len(listed_vals)):
-#         if i == 0:
-#             continue
-#         else:
-            
-#             if listed_vals[i] < listed_vals[i-1]:
-#                 print('found')
-               
-#                 correct_vals.append(listed_vals[i-1])
-#                 listed_vals[i] = listed_vals[i-1]
-#             else:
-#                 correct_vals.append(listed_vals[i])                   
+              
                
     
     return html.Div(children=[
+                            html.Br(),
+                            html.P(chain,style=dict(textAlign='center',fontSize=30, fontFamily='Arial')),
                              dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                        figure = go.Figure(data=[
                                                                 go.Scatter(x = df.loc[:max_date].index, 
@@ -358,11 +361,15 @@ def ennusta(shp,days):
                                                                                   ),
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
-                                                                          autosize = True)
+                                                                          autosize = True,
+                                                                          font=dict(family='Arial',
+                                                                 size=16,
+                                                                 color='black'
+                                                                ))
                                                          )
                                       ),
                                                          
-                                html.P(chain),
+                                
                                 html.Br(),
                                 dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                          figure = go.Figure(data= [
@@ -386,7 +393,11 @@ def ennusta(shp,days):
                                                                                ),
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
-                                                                          autosize = True)
+                                                                          autosize = True,
+                                                                             font=dict(family='Arial',
+                                                                 size=16,
+                                                                 color='black'
+                                                                ))
                                                            )
                                          )
     ])
