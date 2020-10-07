@@ -194,20 +194,36 @@ def ennusta(shp,days,alku):
     scl = StandardScaler()
 
 
-    df = pd.DataFrame(data[data.shp==shp].resample('D').infected.sum().cumsum()).reset_index()#              
-    df_x = df[df.index % 2 == 0]
-    df_y = df[df.index % 2 != 0]
-    df = pd.concat([df_x.reset_index(),df_y.reset_index()],axis=1)
-    df.columns=['index','pvm','infected','i','next','val']
-    df.drop('i',axis=1,inplace=True)
-    df.next = df.next.fillna(df.pvm.max()+pd.Timedelta(days=1))
-    df['muutos'] = df.val-df.infected
-    df = df.set_index('pvm').sort_index().loc[datetime.today()-pd.Timedelta(days = days_gone):].reset_index()
-    df.next = df.next.fillna(df.pvm + pd.Timedelta(days=1))
+    df = pd.DataFrame(data[data.shp==shp].resample('D').infected.sum().cumsum()).reset_index()# 
     
+    dff = pd.DataFrame()
+    dfff=df.copy().set_index('pvm')
+    
+    
+    
+    dff['pvm'] = dfff.index
+    dff['next'] = dfff.index+pd.Timedelta(days=1)
+    
+    dff = dff.set_index('pvm')
+    
+    dff['infected'] = dfff.infected
+
+
+    nexts = dfff.loc[[date for date in dff.next if date in dfff.index]]
+    nexts = pd.concat([nexts, pd.DataFrame([{'pvm':nexts.index.max()+pd.Timedelta(days=1),'infected':np.nan}]).set_index('pvm')])
+
+    dff['val'] = nexts.infected.values
+    
+    
+    dff['muutos'] = dff.val-dff.infected
+   
+
+    df = dff.loc[datetime.today()-pd.Timedelta(days = days_gone):].reset_index()
+
+
 
     df_x = df.dropna().copy()
-
+    
 
     x_train = df_x.iloc[:int(ratio*len(df_x))][['infected']]
     y_train = df_x.iloc[:int(ratio*len(df_x))]['muutos']
@@ -215,8 +231,8 @@ def ennusta(shp,days,alku):
 
     
 
-    x_test = df_x.iloc[int(ratio*len(df_x)):][['infected']]
-    y_test = df_x.iloc[int(ratio*len(df_x)):]['val']
+    x_test = df_x.iloc[int(ratio*len(df)):][['infected']]
+    y_test = df_x.iloc[int(ratio*len(df)):]['val']
     X_test = scl.transform(x_test)
     
     
@@ -248,7 +264,24 @@ def ennusta(shp,days,alku):
     chain = chain + 'Explained variance score: '+str(round(explained_variance_score(y_test,y_hat),2))+'.'
     
     
-
+    test_figure = go.Figure(data = [go.Scatter(x = df_x.pvm, y = df_x.infected, name = 'Toteutunut', mode = 'lines', marker = dict(color='green')),
+                                               go.Scatter(x = df_x.iloc[int(ratio*len(df)):].pvm, y = np.ceil(y_hat), name = 'Ennuste', mode = 'lines+markers', marker = dict(color =  'red'))],
+                           layout = go.Layout(title = dict(text = 'Koronavirustartuntojen ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
+                                                                                   y = 0.9,
+                                                                                   x = 0.5,
+                                                                                   xanchor = 'center',
+                                                                                   yanchor = 'top'
+                                                                               ),
+                                                                          yaxis = dict(title = 'Tartunnat', tickformat =' '),
+                                                                          xaxis = dict(title = 'Päivät'),
+                                                                          autosize = True,
+                                                                             font=dict(family='Arial',
+                                                                                         size=16,
+                                                                                         color='black'
+                                                                )
+                                             )
+                           )
+    
     
     datapoints = days
     
@@ -259,6 +292,7 @@ def ennusta(shp,days,alku):
     
     
     x_train = df_x[['infected']]
+    
     X_train =scl.fit_transform(x_train)
     
     if selected == 'Muutos':
@@ -266,34 +300,39 @@ def ennusta(shp,days,alku):
         
         y_train = df_x[['muutos']]
         
+        
         lasso.fit(X_train, y_train)
 
         
         for i in range(datapoints):
             
             df_tail = df.tail(1).copy()
-            
-            
-            if df_tail.val.notna().values[0]:
-            
-                df_tail.pvm=df_tail.next
-                df_tail.next = df_tail.next + pd.Timedelta(days = 1)
-                df_tail.infected = df_tail.val
-                df_tail['index']+=1
-                df_tail.index+=1
-            
-                
-                
 
+            
+            if i == 0:
+                
+                df = df.iloc[:-1,:]
+
+            
+            else:
+                df_tail.pvm = df_tail.next
+                df_tail.next = df_tail.pvm + pd.Timedelta(days = 1)
+                df_tail.infected = df_tail.val
+                
+                
             x_predict = df_tail[['infected']]
             X_predict = scl.transform(x_predict)
             
+            
             df_tail.muutos = lasso.predict(X_predict)
             df_tail.val = np.maximum(df_tail.infected,np.maximum(0, df_tail.infected + df_tail.muutos))
+
+            df_tail.index+=1
             
-            
+           
             
             df = pd.concat([df,df_tail])
+            
     
     else:
         
@@ -306,12 +345,16 @@ def ennusta(shp,days,alku):
             
             df_tail = df.tail(1).copy()
             
-            if df_tail.val.notna().values[0]:
             
+            if i==0:
+                df = df.iloc[:-1,:]
+            
+            else:
+                
                 df_tail.pvm=df_tail.next
                 df_tail.next = df_tail.next + pd.Timedelta(days = 1)
                 df_tail.infected = df_tail.val
-                df_tail['index']+=1
+                
                 df_tail.index+=1
             
             x_predict = df_tail[['infected']]
@@ -323,14 +366,23 @@ def ennusta(shp,days,alku):
             
 
             df_tail.val = np.maximum(df_tail.infected,np.maximum(0,  lasso.predict(X_predict)))
+           
+            df_tail.index+=1
+            
 
       
             
             df = pd.concat([df,df_tail])
+            
 
         
     
-    df = pd.concat([df[['pvm','infected']],df[['next','val']].rename(columns={'next':'pvm','val':'infected'})],axis=0).drop_duplicates().set_index('pvm').sort_index()
+    
+    
+    
+    
+    df =df.set_index('pvm')
+
     
     df.infected = np.ceil(df.infected)
     
@@ -399,7 +451,9 @@ def ennusta(shp,days,alku):
                                                                  color='black'
                                                                 ))
                                                            )
-                                         )
+                                         ),
+        html.Br(),
+        dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},figure=test_figure)
     ])
 
 app.layout= serve_layout
