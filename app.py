@@ -191,6 +191,7 @@ def ennusta(shp,days,alku):
 
     ratio=0.7
     lasso = Lasso(random_state=42)
+    lasso_change = Lasso(random_state=42)
     scl = StandardScaler()
 
 
@@ -231,14 +232,14 @@ def ennusta(shp,days,alku):
 
     
 
-    x_test = df_x.iloc[int(ratio*len(df)):][['infected']]
-    y_test = df_x.iloc[int(ratio*len(df)):]['val']
+    x_test = df_x.iloc[int(ratio*len(df_x)):][['infected']]
+    y_test = df_x.iloc[int(ratio*len(df_x)):]['val']
     X_test = scl.transform(x_test)
     
     
-    lasso.fit(X_train,y_train)
+    lasso_change.fit(X_train,y_train)
 
-    y_hat_change=np.maximum(0,x_test['infected'] + lasso.predict(X_test))
+    y_hat_change=np.maximum(0,x_test['infected'] + lasso_change.predict(X_test))
     
 
     y_train = df_x.iloc[:int(ratio*len(df_x))]['val']
@@ -251,6 +252,7 @@ def ennusta(shp,days,alku):
 
     if mean_absolute_error(y_test, y_hat_change) < mean_absolute_error(y_test, y_hat):
         y_hat=y_hat_change
+        lasso = lasso_change
         selected='Muutos'
     else:
         selected='Absoluuttinen'
@@ -263,12 +265,77 @@ def ennusta(shp,days,alku):
     chain = chain + 'R²: ' +str(round(r2_score(y_test,y_hat),2))+', ja '
     chain = chain + 'Explained variance score: '+str(round(explained_variance_score(y_test,y_hat),2))+'.'
     
+    # Simuloi
+    
+    df_simulate = df.iloc[:int(ratio*len(df))]
+    
+    
+    if selected == 'Muutos':
+        
+
+        for i in range(int(ratio*len(df))+1,len(df)):
+
+            df_tail = df_simulate.copy().tail(1)
+           # print(df_tail)
+            
+            df_tail.pvm =df_tail.next
+            df_tail.next =df_tail.pvm+pd.Timedelta(days = 1)
+            infected = df_tail.infected
+            df_tail.infected = df_tail.val
+            
+            df_tail.muutos = lasso_change.predict(scl.transform(df_tail[['infected']]))
+            df_tail.val = np.maximum(df_tail.infected,np.maximum(0, infected + df_tail.muutos))
+            #df_tail.infected = df_tail.val
+            #df_tail.val=np.nan
+            #print(df_tail)
+            
+            df_simulate = pd.concat([df_simulate, df_tail])
+    else:
+        
+        for i in range(int(ratio*len(df))+1,len(df)):
+
+            df_tail = df_simulate.copy().tail(1)
+            
+            df_tail.pvm =df_tail.next
+            df_tail.next =df_tail.pvm+pd.Timedelta(days = 1)
+            
+            
+            df_tail.infected = df_tail.val
+            df_tail.val = np.maximum(df_tail.infected,np.maximum(0,  lasso.predict(scl.transform(df_tail[['infected']]))))
+            #df_tail.infected = df_tail.val
+            #df_tail.val=np.nan
+            
+            df_simulate = pd.concat([df_simulate, df_tail])
+    
+    
+    
+    
     
     test_figure = go.Figure(data = [go.Scatter(x = df_x.pvm, y = df_x.infected, name = 'Toteutunut', mode = 'lines', marker = dict(color='green')),
                                                go.Scatter(x = df_x.iloc[int(ratio*len(df)):].pvm, y = np.ceil(y_hat), name = 'Ennuste', mode = 'lines+markers', marker = dict(color =  'red'))],
-                           layout = go.Layout(title = dict(text = 'Koronavirustartuntojen ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
+                           layout = go.Layout(title = dict(text = 'Koronavirustartuntojen lyhyen aikavälin ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
+                                                           font=dict(size=18),
+                                                                                   xanchor = 'center',
+                                                                                   yanchor = 'top'
+                                                                               ),
+                                                                          yaxis = dict(title = 'Tartunnat', tickformat =' '),
+                                                                          xaxis = dict(title = 'Päivät'),
+                                                                          autosize = True,
+                                                                             font=dict(family='Arial',
+                                                                                         size=16,
+                                                                                         color='black'
+                                                                )
+                                             )
+                           )
+    
+    simulate_figure = go.Figure(data = [go.Scatter(x = df_x.pvm, y = df_x.infected, name = 'Toteutunut', mode = 'lines', marker = dict(color='green')),
+                                               go.Scatter(x = df_simulate.iloc[int(ratio*len(df)):].pvm, y = np.ceil(df_simulate.iloc[int(ratio*len(df)):].val), name = 'Ennuste', mode = 'lines+markers', marker = dict(color =  'red'))],
+                           layout = go.Layout(title = dict(text = 'Koronavirustartuntojen pitkän aikavälin ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
+                                                                                   y = 0.9,
+                                                                                   x = 0.5,
+                                                           font=dict(size=18),
                                                                                    xanchor = 'center',
                                                                                    yanchor = 'top'
                                                                                ),
@@ -301,7 +368,7 @@ def ennusta(shp,days,alku):
         y_train = df_x[['muutos']]
         
         
-        lasso.fit(X_train, y_train)
+        lasso_change.fit(X_train, y_train)
 
         
         for i in range(datapoints):
@@ -394,7 +461,10 @@ def ennusta(shp,days,alku):
     
     return html.Div(children=[
                             html.Br(),
-                            html.P(chain,style=dict(textAlign='center',fontSize=30, fontFamily='Arial')),
+                            html.P('Laatuparametrit',style=dict(textAlign='center',fontSize=30, fontFamily='Arial')),
+                            html.P(chain,style=dict(textAlign='center',fontSize=25, fontFamily='Arial')),
+                            html.Br(),
+                            html.P('Ennuste',style=dict(textAlign='center',fontSize=30, fontFamily='Arial')),
                              dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
                                        figure = go.Figure(data=[
                                                                 go.Scatter(x = df.loc[:max_date].index, 
@@ -449,12 +519,36 @@ def ennusta(shp,days,alku):
                                                                              font=dict(family='Arial',
                                                                  size=16,
                                                                  color='black'
-                                                                ))
-                                                           )
-                                         ),
+                                                                )))),
         html.Br(),
-        dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},figure=test_figure)
-    ])
+        html.P("Testi ja simulaatio",style=dict(textAlign='center',fontSize=30, fontFamily='Arial')),
+        html.P('Testillä ennustetaan seuraavan päivän tartuntoja edellisen päivän toteuman perusteella. Näin voidaan tarkastella "huomisen" ennusteen laatua.',style=dict(textAlign='center',fontSize=15, fontFamily='Arial')),
+        html.P('Simulaatiolla ennustetaan seuraavan päivän tartuntoja edellisen päivän ennusteen perusteella. Näin voidaan tarkastella pidemmän tulevaisuuden ennusteen laatua.',style=dict(textAlign='center',fontSize=15, fontFamily='Arial')),
+
+        html.Div(className='row', children=[  
+            html.Div(className='six columns',children=[
+                html.Br(),
+                dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
+                          figure=test_figure)
+            ]),
+            html.Div(className='six columns',
+                     children=[
+                html.Br(),
+                dcc.Graph(config={'modeBarButtonsToRemove':['sendDataToCloud']},
+                          figure=simulate_figure)
+            ])
+        
+    ]),
+        html.Br(),
+        html.P("Kuten nähdään lähitulevaisuuden ennustamisessa virhe on pienempi kuin pitemmälle tulevaisuuteen ennustettaessa.",style=dict(textAlign='center',fontSize=15, fontFamily='Arial')),
+    ]
+                   )
+
+                                         
+        
+                                                            
+                                     
+    
 
 app.layout= serve_layout
 #Aja sovellus.
