@@ -16,6 +16,7 @@ from dash.dependencies import Input, Output
 from flask import Flask
 from datetime import datetime
 import os
+from io import StringIO
 
 days_gone = (datetime.now()-datetime(2020,1,1)).days
 
@@ -23,20 +24,23 @@ headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 
 
 
-url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.json?row=dateweek2020010120201231-443702L&column=hcdmunicipality2020-445222L'
+url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=hcdmunicipality2020-445222&column=dateweek20200101-509030&column=508804L&filter=measure-444833&'
+bytes_data = requests.get(url,headers=headers).content
 
-pvm =pd.DataFrame(list(requests.get(url,headers=headers).json()['dataset']['dimension']['dateweek2020010120201231']['category']['label'].values()),columns=['pvm'])
-pvm['key']=0
-shp = pd.DataFrame(list(requests.get(url,headers=headers).json()['dataset']['dimension']['hcdmunicipality2020']['category']['label'].values()),columns=['shp'])
-shp['key']=0
-data = pd.merge(left=pvm,right=shp).drop('key',axis=1)
-data.index=data.index.astype(int)
-vals = pd.DataFrame([requests.get(url,headers=headers).json()['dataset']['value']]).T.rename(columns={0:'infected'})
-vals.index=vals.index.astype(int)
-data=pd.merge(left=data,right=vals,left_on=data.index, right_on=vals.index,how='right').drop('key_0',axis=1)
-data.pvm=pd.to_datetime(data.pvm)
-data=data.set_index('pvm')
-data.infected=data.infected.astype(float)
+s=str(bytes_data,'utf-8')
+
+data = StringIO(s) 
+
+data=pd.read_csv(data,sep=';')        
+
+data=data[data['Aika.1']!='Yhteensä']
+data=data.set_index('Aika.1')
+data.index=pd.to_datetime(data.index)
+data=data.dropna()
+data.drop('Aika',axis=1,inplace=True)
+data.index.name='pvm'
+data.columns=['shp','infected']
+
 
 
 SHP = [{'label':s, 'value': s} for s in sorted(list(pd.unique(data.shp)))]
@@ -109,7 +113,7 @@ def serve_layout():
                                                  dcc.Dropdown(id = 'sairaanhoitopiirit',
                                                               multi=False,
                                                               options = SHP,
-                                                              value='Kaikki Alueet')
+                                                              value='Varsinais-Suomen SHP')
                                                 ]),
                                         html.Div(className='six columns',children=[
                                                 html.H2('Valitse ennusteen pituus (päivää).'),
@@ -171,23 +175,12 @@ def update_year(value):
     Input('alku','value')]
 )
 def ennusta(shp,days,alku):
+    
+    global data
 
     days_gone =alku
     
-    url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.json?row=dateweek2020010120201231-443702L&column=hcdmunicipality2020-445222L'
-    headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
-    pvm =pd.DataFrame(list(requests.get(url,headers=headers).json()['dataset']['dimension']['dateweek2020010120201231']['category']['label'].values()),columns=['pvm'])
-    pvm['key']=0
-    shp_ = pd.DataFrame(list(requests.get(url,headers=headers).json()['dataset']['dimension']['hcdmunicipality2020']['category']['label'].values()),columns=['shp'])
-    shp_['key']=0
-    data = pd.merge(left=pvm,right=shp_).drop('key',axis=1)
-    data.index=data.index.astype(int)
-    vals = pd.DataFrame([requests.get(url,headers=headers).json()['dataset']['value']]).T.rename(columns={0:'infected'})
-    vals.index=vals.index.astype(int)
-    data=pd.merge(left=data,right=vals,left_on=data.index, right_on=vals.index,how='right').drop('key_0',axis=1)
-    data.pvm=pd.to_datetime(data.pvm)
-    data=data.set_index('pvm')
-    data.infected=data.infected.astype(float)
+  
 
     ratio=0.7
     lasso = Lasso(random_state=42)
@@ -195,7 +188,8 @@ def ennusta(shp,days,alku):
     scl = StandardScaler()
 
 
-    df = pd.DataFrame(data[data.shp==shp].resample('D').infected.sum().cumsum()).reset_index()# 
+    df = pd.DataFrame(data[data.shp==shp].copy().resample('D').infected.sum().cumsum()).reset_index()# 
+    
     
     dff = pd.DataFrame()
     dfff=df.copy().set_index('pvm')
@@ -315,7 +309,7 @@ def ennusta(shp,days,alku):
     
     test_figure = go.Figure(data = [go.Scatter(x = df.pvm, y = df.infected, name = 'Toteutunut', mode = 'lines', marker = dict(color='green')),
                                                go.Scatter(x = df.iloc[int(ratio*len(df)):-1].next, y = np.ceil(y_hat), name = 'Ennuste', mode = 'lines+markers', marker = dict(color =  'red'))],
-                           layout = go.Layout(title = dict(text = 'Lyhyen tähtäimen ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
+                           layout = go.Layout(title = dict(text = 'Lyhyen tähtäimen ennusteen ja toteuman välinen ero sairaanhoitopiirille: <br>'+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                            font=dict(size=18),
@@ -324,6 +318,7 @@ def ennusta(shp,days,alku):
                                                                                ),
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
+                                                                          hovermode="x unified",
                                                                           autosize = True,
                                                                              font=dict(family='Arial',
                                                                                          size=16,
@@ -342,7 +337,7 @@ def ennusta(shp,days,alku):
     sim_chain = sim_chain + 'Explained variance score: '+str(round(explained_variance_score(y_test,y_hat),2))+'.'
     simulate_figure = go.Figure(data = [go.Scatter(x = df.pvm, y = df.infected, name = 'Toteutunut', mode = 'lines', marker = dict(color='green')),
                                                go.Scatter(x = df_simulate.iloc[int(ratio*len(df))-1:-1].next, y = np.ceil(df_simulate.iloc[int(ratio*len(df))-1:-1].val), name = 'Ennuste', mode = 'lines+markers', marker = dict(color =  'red'))],
-                           layout = go.Layout(title = dict(text = 'Pitkän tähtäimen ennusteen ja toteuman välinen ero sairaanhoitopiirille: '+shp,
+                           layout = go.Layout(title = dict(text = 'Pitkän tähtäimen ennusteen ja toteuman välinen ero sairaanhoitopiirille: <br>'+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                            font=dict(size=18),
@@ -351,6 +346,7 @@ def ennusta(shp,days,alku):
                                                                                ),
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
+                                                                          hovermode="x unified",
                                                                           autosize = True,
                                                                              font=dict(family='Arial',
                                                                                          size=16,
@@ -485,12 +481,13 @@ def ennusta(shp,days,alku):
                                                                            name='Ennuste')
                                                                ],
                                                           layout=go.Layout(title = dict(
-                                                          text = 'Koronavirustartuntojen seuraavan '+str(days)+' päivän kumulatiivinen ennuste alueelle: '+shp,
+                                                          text = 'Koronavirustartuntojen seuraavan '+str(days)+' päivän kumulatiivinen ennuste alueelle: <br>'+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                                                    xanchor = 'center',
                                                                                    yanchor = 'top'
                                                                                   ),
+                                                                           hovermode="x unified",
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
                                                                           autosize = True,
@@ -517,12 +514,13 @@ def ennusta(shp,days,alku):
                                                                        textposition='outside'
                                                                        )],
                                                            layout = go.Layout(title = dict(
-                                                                    text = 'Koronavirustartuntojen seuraavan '+str(days)+' päivän päivittäiset ennusteet alueelle: '+shp,
+                                                                    text = 'Koronavirustartuntojen seuraavan '+str(days)+' päivän päivittäiset ennusteet alueelle: <br>'+shp,
                                                                                    y = 0.9,
                                                                                    x = 0.5,
                                                                                    xanchor = 'center',
                                                                                    yanchor = 'top'
                                                                                ),
+                                                                              hovermode="x unified",
                                                                           yaxis = dict(title = 'Tartunnat', tickformat =' '),
                                                                           xaxis = dict(title = 'Päivät'),
                                                                           autosize = True,
@@ -550,17 +548,11 @@ def ennusta(shp,days,alku):
                          html.P(sim_chain,style=dict(textAlign='center',fontSize=12, fontFamily='Arial')),
             ])
         
-    ]),
-       # html.Br(),
-        #html.P("Kuten nähdään lähitulevaisuuden ennustamisessa virhe on pienempi kuin pitemmälle tulevaisuuteen ennustettaessa.",style=dict(textAlign='center',fontSize=15, fontFamily='Arial')),
+    ])
+
     ]
                    )
 
-                                         
-        
-                                                            
-                                     
-    
 
 app.layout= serve_layout
 #Aja sovellus.
