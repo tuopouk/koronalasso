@@ -23,10 +23,7 @@ days_gone = (datetime.now()-datetime(2020,1,1)).days
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
 
 
-
-# url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=hcdmunicipality2020-445222&column=dateweek20200101-509030&column=508804L&filter=measure-444833&'
-
-url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=dateweek20200101-509030&row=509093L&row=hcdmunicipality2020-445222&column=measure-444833.445356.492118.&filter=measure-141082&&fo=1'
+url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=dateweek20200101-509030&row=hcdmunicipality2020-445222&row=509093L&column=measure-444833.445356.492118.&&fo=1'
 
 
 bytes_data = requests.get(url,headers=headers).content
