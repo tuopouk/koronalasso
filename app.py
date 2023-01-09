@@ -23,8 +23,8 @@ days_gone = (datetime.now()-datetime(2020,1,1)).days
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36'}
 
 
-url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=dateweek20200101-509030&row=hcdmunicipality2020-445222&row=509093L&column=measure-444833.445356.492118.&&fo=1'
-
+# url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=dateweek20200101-509030&row=hcdmunicipality2020-445222&row=509093L&column=measure-444833.445356.492118.&&fo=1'
+url = 'https://sampo.thl.fi/pivot/prod/fi/epirapo/covid19case/fact_epirapo_covid19case.csv?row=hcdmunicipality2020-445222&row=509038L&column=measure-444833.445356.492118.816930.816957.&&fo=1'
 
 bytes_data = requests.get(url,headers=headers).content
 
@@ -32,13 +32,13 @@ s=str(bytes_data,'utf-8')
 
 data = StringIO(s) 
 
-data=pd.read_csv(data,sep=';')        
+data=pd.read_csv(data,sep=';')       
 
-data=data[(data['Aika.1']!='Yhteensä') & (data.Mittari == 'Tapausten lukumäärä')].drop('Mittari',axis=1)
-data=data.set_index('Aika.1')
+
+data=data[(data.Mittari == 'Tapausten lukumäärä')].drop('Mittari',axis=1)
+data=data.set_index('Aika')
 data.index=pd.to_datetime(data.index)
 data=data.dropna()
-data.drop('Aika',axis=1,inplace=True)
 data.index.name='pvm'
 data.columns=['shp','infected']
 
